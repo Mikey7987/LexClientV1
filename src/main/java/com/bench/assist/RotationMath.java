@@ -1,6 +1,7 @@
 package com.bench.assist;
 
 import net.minecraft.entity.Entity;
+import net.minecraft.util.math.Box;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 
@@ -22,13 +23,17 @@ public final class RotationMath {
     }
 
     public static Vec3d aimPoint(Entity target) {
-        double y = target.getY() + target.getHeight() * 0.68;
-        return new Vec3d(target.getX(), y, target.getZ());
+        Box box = target.getBoundingBox();
+        double centerX = (box.minX + box.maxX) * 0.5;
+        double centerZ = (box.minZ + box.maxZ) * 0.5;
+        // Aim at center-upper torso so movement doesn't bounce between head and feet
+        double targetY = box.minY + (box.maxY - box.minY) * 0.62;
+        return new Vec3d(centerX, targetY, centerZ);
     }
 
-    public static float stepToward(float currentDelta, float maxStep, float jitter) {
-        float clamped = MathHelper.clamp(currentDelta, -maxStep, maxStep);
-        float quantized = Math.round(clamped / 0.05f) * 0.05f;
-        return quantized + jitter;
+    public static boolean isLookingAtBox(Vec3d eyePos, Vec3d lookVec, Box box, double maxDist) {
+        Box expanded = box.expand(0.12);
+        Vec3d end = eyePos.add(lookVec.multiply(maxDist));
+        return expanded.raycast(eyePos, end).isPresent();
     }
 }
