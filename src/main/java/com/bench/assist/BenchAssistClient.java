@@ -114,13 +114,23 @@ public final class BenchAssistClient implements ClientModInitializer {
         double angularDist = Math.hypot(deltas[0], deltas[1]);
         if (angularDist > config.fovConeDeg) return;
 
-        float deadzoneDeg = 0.35f;
+        float deadzoneDeg = MathHelper.clamp(config.deadzoneDeg, 0.05f, 2.00f);
         float yawDelta = Math.abs(deltas[0]) > deadzoneDeg ? deltas[0] : 0.0f;
-        float pitchDelta = Math.abs(deltas[1]) > deadzoneDeg ? deltas[1] : 0.0f;
+        float pitchDelta = Math.abs(deltas[1]) > deadzoneDeg ? deltas[1] * config.pitchScale : 0.0f;
 
         float t = MathHelper.clamp(config.smoothFactor, 0.02f, 0.65f);
-        float nextYaw = player.getYaw() + yawDelta * t;
-        float nextPitch = MathHelper.clamp(player.getPitch() + pitchDelta * t, -90.0f, 90.0f);
+
+        // Micro Jitter only applies while actively tracking outside the deadzone
+        float jitterYaw = 0.0f;
+        float jitterPitch = 0.0f;
+        if (Math.abs(yawDelta) > 0.0f && config.microJitterDeg > 0.0f) {
+            ThreadLocalRandom rng = ThreadLocalRandom.current();
+            jitterYaw = (float) rng.nextGaussian() * (config.microJitterDeg * 0.4f);
+            jitterPitch = (float) rng.nextGaussian() * (config.microJitterDeg * 0.25f);
+        }
+
+        float nextYaw = player.getYaw() + yawDelta * t + jitterYaw;
+        float nextPitch = MathHelper.clamp(player.getPitch() + pitchDelta * t + jitterPitch, -90.0f, 90.0f);
 
         player.setYaw(nextYaw);
         player.setPitch(nextPitch);
@@ -166,8 +176,14 @@ public final class BenchAssistClient implements ClientModInitializer {
 
         ThreadLocalRandom rng = ThreadLocalRandom.current();
         int minMs = Math.max(15, config.minAttackDelayMs);
-        int maxMs = Math.max(minMs + 10, config.maxAttackDelayMs);
+        int maxMs = Math.max(minMs + 15, config.maxAttackDelayMs);
         nextTriggerTimeMs = now + rng.nextInt(minMs, maxMs + 1);
+
+        // Occasional human miss: swings arm/resets cadence without landing an unnatural 100% hit streak
+        if (config.missChancePct > 0.0f && rng.nextFloat() * 100.0f < config.missChancePct) {
+            player.swingHand(Hand.MAIN_HAND);
+            return;
+        }
 
         client.interactionManager.attackEntity(player, target);
         player.swingHand(Hand.MAIN_HAND);
