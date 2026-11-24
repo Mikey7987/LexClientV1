@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "benchassist",
+  "version": "1.21.11-1.0.0",
+  "name": "BenchAssist",
+  "description": "1.21.11 Fabric combat assist with Right-Shift GUI and W-sprint handling.",
+  "authors": ["Mikey_"],
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "com.bench.assist.BenchAssistClient"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "minecraft": "~1.21.11",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}
